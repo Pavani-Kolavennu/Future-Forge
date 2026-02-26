@@ -95,6 +95,7 @@ function Register() {
             id="password"
             placeholder="Enter a strong password"
             required
+            minLength={8}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
