@@ -1,7 +1,15 @@
 import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
 import "../styles/Home.css";
 
 function Home() {
+  const [currentUser, setCurrentUser] = useState(null);
+
+  useEffect(() => {
+    const user = localStorage.getItem("currentUser");
+    setCurrentUser(user ? JSON.parse(user) : null);
+  }, []);
+
   return (
     <div className="home-container">
       <section className="hero">
@@ -11,12 +19,20 @@ function Home() {
             Take our comprehensive career assessment to understand your strengths, interests, and find the ideal career for you.
           </p>
           <div className="hero-buttons">
-            <Link to="/assessment" className="btn btn-primary">
-              Start Assessment
+            <Link
+              to={currentUser?.role === "admin" ? "/admin" : "/assessment"}
+              className="btn btn-primary"
+            >
+              {currentUser?.role === "admin" ? "Go to Admin Dashboard" : "Start Assessment"}
             </Link>
-            <Link to="/register" className="btn btn-secondary">
-              Get Started
-            </Link>
+            {currentUser?.role !== "admin" && (
+              <Link
+                to={currentUser ? "/profile" : "/register"}
+                className="btn btn-secondary"
+              >
+                {currentUser ? "Go to Dashboard" : "Get Started"}
+              </Link>
+            )}
           </div>
         </div>
         <div className="hero-image">
@@ -80,8 +96,11 @@ function Home() {
       <section className="cta">
         <h2>Ready to Find Your Dream Career?</h2>
         <p>Start your career assessment journey today and unlock your potential.</p>
-        <Link to="/assessment" className="btn btn-large">
-          Take Assessment Now
+        <Link
+          to={currentUser?.role === "admin" ? "/admin" : "/assessment"}
+          className="btn btn-large"
+        >
+          {currentUser?.role === "admin" ? "Open Admin Dashboard" : "Take Assessment Now"}
         </Link>
       </section>
     </div>

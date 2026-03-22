@@ -33,12 +33,17 @@ function Result() {
       { title: "Solutions Architect", description: "Design technical solutions for clients. Combines technical expertise with client interaction." },
       { title: "Machine Learning Engineer", description: "Work on cutting-edge AI/ML solutions. Perfect for those passionate about innovation and technology." }
     ],
-    "Human Resources Manager": [
-      { title: "Talent Acquisition Specialist", description: "Find and recruit top talent. Perfect for your people skills and communication abilities." },
-      { title: "HR Business Partner", description: "Strategic HR leadership role. Combines people management with business acumen." },
-      { title: "Training & Development Manager", description: "Develop employee skills and growth programs. Great for those who enjoy coaching and mentoring." },
-      { title: "Organizational Development Consultant", description: "Help organizations improve performance. Ideal for strategic thinkers with people skills." },
-      { title: "Employee Relations Manager", description: "Handle workplace relationships and conflicts. Perfect for strong communicators." }
+    "Data Scientist": [
+      { title: "Machine Learning Engineer", description: "Develop and deploy ML models. Perfect for those passionate about AI and statistics." },
+      { title: "Analytics Engineer", description: "Build data pipelines and analytics platforms. Great for those who love data infrastructure." },
+      { title: "Business Intelligence Analyst", description: "Transform data into actionable business insights. Ideal for data-driven decision makers." },
+      { title: "Data Engineer", description: "Build and maintain data infrastructure. Perfect for those interested in big data technologies." },
+      { title: "Research Scientist", description: "Conduct advanced research and develop new algorithms. Ideal for academic-minded professionals." }
+    ],
+    "DevOps Engineer": [
+      { title: "Cloud Architect", description: "Design cloud infrastructure solutions. Perfect for those interested in large-scale systems." },
+      { title: "Infrastructure Engineer", description: "Manage and optimize infrastructure. Great for those who love system administration." },
+      { title: "Site Reliability Engineer", description: "Ensure system reliability and performance. Ideal for detail-oriented problem solvers." }
     ],
     "UX/UI Designer": [
       { title: "Product Designer", description: "Design end-to-end product experiences. Combines creativity with user research." },
@@ -46,6 +51,38 @@ function Result() {
       { title: "Visual Designer", description: "Focus on aesthetics and brand identity. Great for those with a strong visual sense." },
       { title: "Design System Architect", description: "Build scalable design frameworks. Combines design with systematic thinking." },
       { title: "UX Researcher", description: "Understand user needs through research. Ideal for analytical creatives." }
+    ],
+    "Product Manager": [
+      { title: "Senior Product Manager", description: "Lead product strategy and vision. Perfect for those with strategic mindset." },
+      { title: "Technical Product Manager", description: "Bridge product and engineering. Great for those with technical background." },
+      { title: "Product Strategist", description: "Shape long-term product direction. Ideal for visionary thinkers." }
+    ],
+    "Project Manager": [
+      { title: "Scrum Master", description: "Facilitate agile processes and team collaboration. Perfect for those who love facilitation." },
+      { title: "Program Manager", description: "Oversee multiple related projects. Great for those managing complexity at scale." },
+      { title: "Technical Program Manager", description: "Manage technical projects and initiatives. Ideal for those with technical background." }
+    ],
+    "Human Resources Manager": [
+      { title: "Talent Acquisition Specialist", description: "Find and recruit top talent. Perfect for your people skills and communication abilities." },
+      { title: "HR Business Partner", description: "Strategic HR leadership role. Combines people management with business acumen." }
+    ],
+    "Business Analyst": [
+      { title: "Senior Business Analyst", description: "Lead requirements and analysis efforts. Perfect for those with strategic mindset." },
+      { title: "Systems Analyst", description: "Analyze and improve business systems. Great for technical analysts." }
+    ],
+    "Marketing Manager": [
+      { title: "Product Marketing Manager", description: "Market and position products. Perfect for those who love product focus." },
+      { title: "Content Marketing Manager", description: "Create and manage marketing content. Great for those who love storytelling." },
+      { title: "Digital Marketing Manager", description: "Manage digital marketing campaigns. Ideal for those interested in digital channels." },
+      { title: "Social Media Manager", description: "Build and manage social media presence. Perfect for those who love social platforms." },
+      { title: "Growth Marketing Manager", description: "Drive user acquisition and growth. Ideal for those interested in scaling." }
+    ],
+    "Solutions Architect": [
+      { title: "Enterprise Architect", description: "Design enterprise-scale solutions. Perfect for those thinking at scale." },
+      { title: "Cloud Architect", description: "Design cloud-based solutions. Great for those interested in cloud platforms." },
+      { title: "Security Architect", description: "Design secure systems and infrastructure. Ideal for those focused on security." },
+      { title: "System Architect", description: "Design complex technical systems. Perfect for those with broad technical knowledge." },
+      { title: "Technology Strategist", description: "Advise on technology strategy. Ideal for visionary technologists." }
     ]
   };
 
@@ -76,7 +113,7 @@ function Result() {
       </div>
 
       <div className="recommendations">
-        <h3>🎯 Top 5 Career Recommendations</h3>
+        <h3>🎯 Top 10 Career Recommendations</h3>
 
         {recommendations.map((rec, index) => (
           <div key={index} className="recommendation-item">

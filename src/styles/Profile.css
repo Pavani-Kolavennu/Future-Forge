@@ -136,6 +136,29 @@
   font-weight: 600;
 }
 
+.admin-suggestion-card {
+  background: #f7fafc;
+  border-left: 4px solid #38a169;
+  border-radius: 8px;
+  padding: 1.2rem;
+}
+
+.admin-suggestion-card p {
+  margin: 0.75rem 0;
+  color: #2d3748;
+  line-height: 1.7;
+}
+
+.admin-suggestion-career {
+  color: #2f855a;
+  font-weight: 700;
+}
+
+.admin-suggestion-date {
+  color: #718096;
+  font-size: 0.85rem;
+}
+
 .no-history {
   text-align: center;
   padding: 3rem;

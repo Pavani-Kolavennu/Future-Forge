@@ -33,13 +33,15 @@ function App() {
           <ul className="nav-links">
             <li><Link to="/">Home</Link></li>
 
-            <li>
-              {user ? (
-                <Link to="/assessment">Assessment</Link>
-              ) : (
-                <Link to="/login">Assessment</Link>
-              )}
-            </li>
+            {(!user || user.role === "student") && (
+              <li>
+                {user ? (
+                  <Link to="/assessment">Assessment</Link>
+                ) : (
+                  <Link to="/login">Assessment</Link>
+                )}
+              </li>
+            )}
 
             {user ? (
               <>
@@ -77,7 +79,11 @@ function App() {
 
           <Route
             path="/assessment"
-            element={user ? <Assessment /> : <Navigate to="/login" />}
+            element={
+              user && user.role === "student"
+                ? <Assessment />
+                : <Navigate to={user && user.role === "admin" ? "/admin" : "/login"} />
+            }
           />
 
           <Route path="/result" element={<Result />} />
