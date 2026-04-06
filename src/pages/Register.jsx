@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/Forms.css";
+import { API_ENDPOINTS, apiRequest, mapBackendRoleToUiRole } from "../api/client";
 
 function Register() {
   const navigate = useNavigate();
@@ -11,7 +12,7 @@ function Register() {
   const [role, setRole] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -26,35 +27,36 @@ function Register() {
       return;
     }
 
-    // Get existing users
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    try {
+      const backendRole = role === "admin" ? "ADMIN" : "CANDIDATE";
+      const auth = await apiRequest(API_ENDPOINTS.auth.register, {
+        method: "POST",
+        body: JSON.stringify({
+          fullName: name,
+          email,
+          password,
+          role: backendRole,
+        }),
+      });
 
-    // Check if email already exists
-    if (users.find((u) => u.email === email)) {
-      setError("Email already registered");
-      return;
-    }
+      localStorage.setItem("authToken", auth.token || "");
+      localStorage.setItem(
+        "currentUser",
+        JSON.stringify({
+          id: auth.userId,
+          name: auth.fullName,
+          email: auth.email,
+          role: mapBackendRoleToUiRole(auth.role),
+        })
+      );
 
-    // Add new user with role
-    const newUser = { name, email, password, role };
-    users.push(newUser);
-    localStorage.setItem("users", JSON.stringify(users));
-
-    // Set current user including role
-    localStorage.setItem(
-      "currentUser",
-      JSON.stringify({
-        name,
-        email,
-        role,
-      })
-    );
-
-    // Redirect based on role
-    if (role === "admin") {
-      navigate("/admin");
-    } else {
-      navigate("/profile");
+      if (role === "admin") {
+        navigate("/admin");
+      } else {
+        navigate("/profile");
+      }
+    } catch (err) {
+      setError(err.message || "Unable to register right now");
     }
   };
 

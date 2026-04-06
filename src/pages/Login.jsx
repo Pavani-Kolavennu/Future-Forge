@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/Forms.css";
+import { API_ENDPOINTS, apiRequest, mapBackendRoleToUiRole } from "../api/client";
 
 function Login() {
   const navigate = useNavigate();
@@ -26,7 +27,7 @@ function Login() {
     generateCaptcha();
   }, []);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
@@ -42,32 +43,38 @@ function Login() {
       return;
     }
 
-    const users = JSON.parse(localStorage.getItem("users") || "[]");
+    try {
+      const auth = await apiRequest(API_ENDPOINTS.auth.login, {
+        method: "POST",
+        body: JSON.stringify({ email, password }),
+      });
 
-    const user = users.find(
-      (u) =>
-        u.email === email &&
-        u.password === password &&
-        u.role === role
-    );
+      const backendRole = mapBackendRoleToUiRole(auth.role);
 
-    if (user) {
+      if (backendRole !== role) {
+        setError("Role mismatch. Please select the correct role.");
+        generateCaptcha();
+        return;
+      }
+
+      localStorage.setItem("authToken", auth.token || "");
       localStorage.setItem(
         "currentUser",
         JSON.stringify({
-          name: user.name,
-          email: user.email,
-          role: user.role,
+          id: auth.userId,
+          name: auth.fullName,
+          email: auth.email,
+          role: backendRole,
         })
       );
 
-      if (role === "admin") {
+      if (backendRole === "admin") {
         navigate("/admin");
       } else {
         navigate("/profile");
       }
-    } else {
-      setError("Invalid email, password, or role mismatch");
+    } catch (err) {
+      setError(err.message || "Invalid email or password");
       generateCaptcha();
     }
   };

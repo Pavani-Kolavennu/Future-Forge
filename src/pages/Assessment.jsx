@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import "../styles/Assessment.css";
+import { API_ENDPOINTS, apiPost } from "../api/client";
 
 function Assessment() {
   const navigate = useNavigate();
@@ -14,7 +15,7 @@ function Assessment() {
     }
   }, [navigate]);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const q1 = document.querySelector('input[name="q1"]:checked')?.id;
@@ -175,21 +176,22 @@ function Assessment() {
       date: new Date().toISOString()
     };
 
-    localStorage.setItem("latestAssessment", JSON.stringify(resultData));
-
     const currentUser = JSON.parse(localStorage.getItem("currentUser"));
     if (currentUser) {
-      const history = JSON.parse(localStorage.getItem("assessmentHistory") || "[]");
-
-      history.push({
-        ...resultData,
-        userId: currentUser.email
-      });
-
-      localStorage.setItem("assessmentHistory", JSON.stringify(history));
+      try {
+        await apiPost(API_ENDPOINTS.integration.assessmentHistory, {
+          userId: currentUser.email,
+          career: resultData.career,
+          score: resultData.score,
+          date: resultData.date,
+        });
+      } catch (err) {
+        alert(err.message || "Unable to save your assessment result");
+        return;
+      }
     }
 
-    navigate("/result");
+    navigate("/result", { state: resultData });
   };
 
   return (

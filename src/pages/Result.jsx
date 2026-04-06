@@ -1,24 +1,46 @@
 import { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import "../styles/Result.css";
+import { API_ENDPOINTS, apiGet } from "../api/client";
 
 function Result() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [result, setResult] = useState(null);
 
   useEffect(() => {
-    // Get latest assessment result
-    const latestAssessment = localStorage.getItem("latestAssessment");
-    
-    if (!latestAssessment) {
-      alert("No assessment found. Please take an assessment first.");
-      navigate("/assessment");
-      return;
-    }
+    const loadResult = async () => {
+      if (location.state?.career && location.state?.score != null) {
+        setResult(location.state);
+        return;
+      }
 
-    const assessment = JSON.parse(latestAssessment);
-    setResult(assessment);
-  }, [navigate]);
+      const currentUserRaw = localStorage.getItem("currentUser");
+      if (!currentUserRaw) {
+        alert("No assessment found. Please take an assessment first.");
+        navigate("/assessment");
+        return;
+      }
+
+      try {
+        const currentUser = JSON.parse(currentUserRaw);
+        const history = await apiGet(API_ENDPOINTS.integration.assessmentHistoryByStudent(currentUser.email));
+        if (!history.length) {
+          alert("No assessment found. Please take an assessment first.");
+          navigate("/assessment");
+          return;
+        }
+
+        const latest = [...history].sort((a, b) => new Date(b.date) - new Date(a.date))[0];
+        setResult(latest);
+      } catch {
+        alert("Unable to load assessment result");
+        navigate("/assessment");
+      }
+    };
+
+    loadResult();
+  }, [location.state, navigate]);
 
   if (!result) {
     return null;
