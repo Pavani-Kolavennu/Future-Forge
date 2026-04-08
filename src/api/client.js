@@ -1,6 +1,6 @@
 const API_BASE_URL = (
   import.meta.env.VITE_API_BASE_URL ||
-  "https://future-forge-backend-production.up.railway.app"
+  "http://localhost:8080"
 ).replace(/\/$/, "");
 
 export const API_ENDPOINTS = {
