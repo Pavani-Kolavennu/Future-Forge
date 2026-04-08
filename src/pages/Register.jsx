@@ -15,10 +15,8 @@ function Register() {
 
   const [otpSent, setOtpSent] = useState(false);
   const [otpVerified, setOtpVerified] = useState(false);
-
   const [error, setError] = useState("");
 
-  // ✅ Send OTP
   const sendOtp = async () => {
     if (!email) {
       alert("Enter email first ❌");
@@ -26,29 +24,30 @@ function Register() {
     }
 
     try {
-      await apiPost(API_ENDPOINTS.auth.sendOtp, { email });
-      alert("OTP sent to email ✅");
+      const response = await apiPost(API_ENDPOINTS.auth.sendOtp, { email });
+      alert(response?.message || "OTP sent to email ✅");
       setOtpSent(true);
-      setOtpVerified(false); // reset verification if re-sent
+      setOtpVerified(false);
+      setError("");
     } catch (err) {
       console.error(err);
       alert(err.message || "Failed to send OTP ❌");
     }
   };
 
-  // ✅ Verify OTP
   const verifyOtp = async () => {
     try {
-      const data = await apiPost(API_ENDPOINTS.auth.verifyOtp, {
+      const response = await apiPost(API_ENDPOINTS.auth.verifyOtp, {
         email,
         otp: otp.trim(),
       });
 
-      if (data === true) {
+      if (response === true || response?.verified === true) {
         alert("OTP Verified ✅");
         setOtpVerified(true);
+        setError("");
       } else {
-        alert("Invalid OTP ❌");
+        alert(response?.message || "Invalid OTP ❌");
         setOtpVerified(false);
       }
     } catch (err) {
@@ -57,7 +56,7 @@ function Register() {
       setOtpVerified(false);
     }
   };
-  // ✅ Register
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
@@ -117,8 +116,6 @@ function Register() {
       {error && <div className="error-message">{error}</div>}
 
       <form onSubmit={handleSubmit}>
-
-        {/* Name */}
         <div className="form-group">
           <label>Full Name</label>
           <input
@@ -130,7 +127,6 @@ function Register() {
           />
         </div>
 
-        {/* Email + OTP */}
         <div className="form-group">
           <label>Email Address</label>
           <input
@@ -146,7 +142,6 @@ function Register() {
           </button>
         </div>
 
-        {/* OTP Section */}
         {otpSent && (
           <div className="form-group">
             <label>Enter OTP</label>
@@ -157,18 +152,12 @@ function Register() {
               onChange={(e) => setOtp(e.target.value)}
             />
 
-            {/* ✅ IMPORTANT: button with disable */}
-            <button
-              type="button"
-              onClick={verifyOtp}
-              disabled={otpVerified}
-            >
+            <button type="button" onClick={verifyOtp} disabled={otpVerified}>
               {otpVerified ? "Verified ✅" : "Verify OTP"}
             </button>
           </div>
         )}
 
-        {/* Password */}
         <div className="form-group">
           <label>Password</label>
           <input
@@ -181,7 +170,6 @@ function Register() {
           />
         </div>
 
-        {/* Confirm Password */}
         <div className="form-group">
           <label>Confirm Password</label>
           <input
@@ -193,26 +181,16 @@ function Register() {
           />
         </div>
 
-        {/* Role */}
         <div className="form-group">
           <label>Register As</label>
-          <select
-            required
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-          >
+          <select required value={role} onChange={(e) => setRole(e.target.value)}>
             <option value="">-- Select Role --</option>
             <option value="student">Student</option>
             <option value="admin">Admin</option>
           </select>
         </div>
 
-        {/* Register */}
-        <button
-          type="submit"
-          className="form-submit"
-          disabled={!otpVerified}
-        >
+        <button type="submit" className="form-submit" disabled={!otpVerified}>
           Register
         </button>
       </form>

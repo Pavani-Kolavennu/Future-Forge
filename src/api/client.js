@@ -7,11 +7,14 @@ export const API_ENDPOINTS = {
   auth: {
     register: "/api/auth/register",
     login: "/api/auth/login",
+    sendOtp: "/api/auth/otp/send",
+    verifyOtp: "/api/auth/otp/verify",
   },
   users: {
     list: "/api/users",
   },
   integration: {
+    assessments: "/api/assessments",
     questions: "/api/admin/questions/simple",
     assignments: "/api/admin/assignments",
     assignmentsByStudent: (studentEmail) =>
@@ -37,14 +40,23 @@ export const mapBackendRoleToUiRole = (role) => {
 
 export async function apiRequest(path, options = {}) {
   const token = localStorage.getItem("authToken");
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(options.headers || {}),
-    },
-    ...options,
-  });
+  const { headers: customHeaders, ...requestOptions } = options;
+  let response;
+
+  try {
+    response = await fetch(`${API_BASE_URL}${path}`, {
+      ...requestOptions,
+      headers: {
+        "Content-Type": "application/json",
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...(customHeaders || {}),
+      },
+    });
+  } catch (error) {
+    throw new Error(
+      `Unable to reach the backend at ${API_BASE_URL}. Make sure the server is running and CORS is configured.`
+    );
+  }
 
   const contentType = response.headers.get("content-type") || "";
   const isJson = contentType.includes("application/json");
