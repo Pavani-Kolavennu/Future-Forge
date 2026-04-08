@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles/Profile.css";
+import { API_ENDPOINTS, apiDelete, apiGet, apiPost, apiRequest } from "../api/client";
 
 function AdminDashboard() {
   const navigate = useNavigate();
@@ -19,6 +20,7 @@ function AdminDashboard() {
   const [testAssignments, setTestAssignments] = useState([]);
   const [assignmentForm, setAssignmentForm] = useState({
     studentId: "",
+    assessmentId: "",
     questions: [],
     dueDate: ""
   });
@@ -34,6 +36,45 @@ function AdminDashboard() {
   // Test Submissions State
   const [testSubmissions, setTestSubmissions] = useState({});
   const [selectedSubmission, setSelectedSubmission] = useState(null);
+
+  const loadQuestions = async () => {
+    const backendQuestions = await apiGet(API_ENDPOINTS.integration.questions);
+    const normalizedQuestions = backendQuestions.map((q) => ({
+      ...q,
+      options: (q.options || []).map((option) =>
+        typeof option === "string" ? option : option.text
+      ),
+    }));
+    setQuestions(normalizedQuestions);
+  };
+
+  const loadAssignments = async () => {
+    const backendAssignments = await apiGet(API_ENDPOINTS.integration.assignments);
+    setTestAssignments(backendAssignments);
+  };
+
+  const loadSuggestions = async () => {
+    const backendSuggestions = await apiGet(API_ENDPOINTS.integration.suggestions);
+    setSuggestions(backendSuggestions);
+  };
+
+  const loadSubmissions = async () => {
+    const backendSubmissions = await apiGet(API_ENDPOINTS.integration.submissions);
+    setTestSubmissions(backendSubmissions);
+  };
+
+  const loadStudents = async () => {
+    const allUsers = await apiRequest(API_ENDPOINTS.users.list);
+    const studentsOnly = allUsers
+      .filter((u) => u.role === "CANDIDATE")
+      .map((u) => ({
+        id: u.id,
+        name: u.fullName,
+        email: u.email,
+        role: "student",
+      }));
+    setUsers(studentsOnly);
+  };
 
   useEffect(() => {
     const currentUser = localStorage.getItem("currentUser");
@@ -52,21 +93,21 @@ function AdminDashboard() {
 
     setAdmin(userData);
 
-    const storedUsers = JSON.parse(localStorage.getItem("users") || "[]");
-    const studentsOnly = storedUsers.filter(u => u.role === "student");
-    setUsers(studentsOnly);
+    const loadAdminData = async () => {
+      try {
+        await Promise.all([
+          loadStudents(),
+          loadQuestions(),
+          loadAssignments(),
+          loadSuggestions(),
+          loadSubmissions(),
+        ]);
+      } catch (err) {
+        alert(err.message || "Unable to load dashboard data from backend");
+      }
+    };
 
-    const storedQuestions = JSON.parse(localStorage.getItem("adminQuestions") || "[]");
-    setQuestions(storedQuestions);
-
-    const storedAssignments = JSON.parse(localStorage.getItem("testAssignments") || "[]");
-    setTestAssignments(storedAssignments);
-
-    const storedSuggestions = JSON.parse(localStorage.getItem("personalizedSuggestions") || "{}");
-    setSuggestions(storedSuggestions);
-
-    const storedSubmissions = JSON.parse(localStorage.getItem("testSubmissions") || "{}");
-    setTestSubmissions(storedSubmissions);
+    loadAdminData();
 
   }, [navigate]);
 
@@ -76,107 +117,137 @@ function AdminDashboard() {
   };
 
   // Question Management
-  const handleAddQuestion = () => {
+  const handleAddQuestion = async () => {
     if (!newQuestion.text || newQuestion.options.some(o => !o)) {
       alert("Please fill in all fields");
       return;
     }
 
-    const question = {
-      id: Date.now(),
-      text: newQuestion.text,
-      options: newQuestion.options
-    };
-
-    const updatedQuestions = [...questions, question];
-    setQuestions(updatedQuestions);
-    localStorage.setItem("adminQuestions", JSON.stringify(updatedQuestions));
-    setNewQuestion({ text: "", options: ["", "", ""] });
-    alert("Question added successfully!");
+    try {
+      const createdQuestion = await apiPost(API_ENDPOINTS.integration.questions, {
+        text: newQuestion.text,
+        options: newQuestion.options,
+      });
+      const updatedQuestions = [
+        ...questions,
+        {
+          ...createdQuestion,
+          options: (createdQuestion.options || []).map((option) =>
+            typeof option === "string" ? option : option.text
+          ),
+        },
+      ];
+      setQuestions(updatedQuestions);
+      setNewQuestion({ text: "", options: ["", "", ""] });
+      alert("Question added successfully!");
+    } catch (err) {
+      alert(err.message || "Unable to add question right now");
+    }
   };
 
-  const handleDeleteQuestion = (id) => {
-    const updatedQuestions = questions.filter(q => q.id !== id);
-    setQuestions(updatedQuestions);
-    localStorage.setItem("adminQuestions", JSON.stringify(updatedQuestions));
+  const handleDeleteQuestion = async (id) => {
+    try {
+      await apiDelete(API_ENDPOINTS.integration.questionById(id));
+      const updatedQuestions = questions.filter(q => q.id !== id);
+      setQuestions(updatedQuestions);
+    } catch (err) {
+      alert(err.message || "Unable to delete question right now");
+    }
   };
 
   // Test Assignment
-  const handleAssignTest = () => {
-    if (!assignmentForm.studentId || assignmentForm.questions.length === 0 || !assignmentForm.dueDate) {
-      alert("Please fill in all fields and select at least one question");
+  const handleAssignTest = async () => {
+    if (!assignmentForm.studentId || !assignmentForm.assessmentId || assignmentForm.questions.length === 0 || !assignmentForm.dueDate) {
+      alert("Please fill in all fields (including assessment id) and select at least one question");
       return;
     }
 
-    const assignment = {
-      id: Date.now(),
-      studentId: assignmentForm.studentId,
-      questions: assignmentForm.questions,
-      dueDate: assignmentForm.dueDate,
-      assignedDate: new Date().toISOString(),
-      status: "assigned"
-    };
+    try {
+      const assignment = await apiPost(API_ENDPOINTS.integration.assignments, {
+        studentId: assignmentForm.studentId,
+        assessmentId: Number(assignmentForm.assessmentId),
+        questions: assignmentForm.questions,
+        dueDate: assignmentForm.dueDate,
+      });
 
-    const updatedAssignments = [...testAssignments, assignment];
-    setTestAssignments(updatedAssignments);
-    localStorage.setItem("testAssignments", JSON.stringify(updatedAssignments));
-    setAssignmentForm({ studentId: "", questions: [], dueDate: "" });
-    alert("Test assigned successfully!");
+      const updatedAssignments = [...testAssignments, assignment];
+      setTestAssignments(updatedAssignments);
+      setAssignmentForm({ studentId: "", assessmentId: "", questions: [], dueDate: "" });
+      alert("Test assigned successfully!");
+    } catch (err) {
+      alert(err.message || "Unable to assign test right now");
+    }
   };
 
-  const handleDeleteAssignment = (id) => {
-    const updatedAssignments = testAssignments.filter(a => a.id !== id);
-    setTestAssignments(updatedAssignments);
-    localStorage.setItem("testAssignments", JSON.stringify(updatedAssignments));
+  const handleDeleteAssignment = async (id) => {
+    try {
+      await apiDelete(API_ENDPOINTS.integration.assignmentById(id));
 
-    // Remove submissions tied to a deleted assignment so stale attempts do not appear in results.
-    const updatedSubmissions = Object.fromEntries(
-      Object.entries(testSubmissions)
-        .map(([studentEmail, submissions]) => {
-          const filteredSubmissions = Object.fromEntries(
-            Object.entries(submissions).filter(([, submission]) => Number(submission.assignmentId) !== id)
-          );
-          return [studentEmail, filteredSubmissions];
-        })
-        .filter(([, submissions]) => Object.keys(submissions).length > 0)
-    );
+      const updatedAssignments = testAssignments.filter(a => a.id !== id);
+      setTestAssignments(updatedAssignments);
 
-    setTestSubmissions(updatedSubmissions);
-    localStorage.setItem("testSubmissions", JSON.stringify(updatedSubmissions));
+      // Remove submissions tied to a deleted assignment so stale attempts do not appear in results.
+      const updatedSubmissions = Object.fromEntries(
+        Object.entries(testSubmissions)
+          .map(([studentEmail, submissions]) => {
+            const filteredSubmissions = Object.fromEntries(
+              Object.entries(submissions).filter(([, submission]) => Number(submission.assignmentId) !== id)
+            );
+            return [studentEmail, filteredSubmissions];
+          })
+          .filter(([, submissions]) => Object.keys(submissions).length > 0)
+      );
 
-    if (selectedSubmission && Number(selectedSubmission.submission.assignmentId) === id) {
-      setSelectedSubmission(null);
+      setTestSubmissions(updatedSubmissions);
+
+      if (selectedSubmission && Number(selectedSubmission.submission.assignmentId) === id) {
+        setSelectedSubmission(null);
+      }
+    } catch (err) {
+      alert(err.message || "Unable to delete assignment right now");
     }
   };
 
   // Personalized Suggestions
-  const handleAddSuggestion = () => {
+  const handleAddSuggestion = async () => {
     if (!suggestionForm.studentId || !suggestionForm.suggestion || !suggestionForm.career) {
       alert("Please fill in all fields");
       return;
     }
 
-    const updatedSuggestions = {
-      ...suggestions,
-      [suggestionForm.studentId]: {
-        ...suggestions[suggestionForm.studentId],
+    try {
+      const createdSuggestion = await apiPost(API_ENDPOINTS.integration.suggestions, {
+        studentId: suggestionForm.studentId,
         suggestion: suggestionForm.suggestion,
         career: suggestionForm.career,
-        date: new Date().toISOString()
-      }
-    };
+      });
 
-    setSuggestions(updatedSuggestions);
-    localStorage.setItem("personalizedSuggestions", JSON.stringify(updatedSuggestions));
-    setSuggestionForm({ studentId: "", suggestion: "", career: "" });
-    alert("Personalized suggestion added successfully!");
+      const updatedSuggestions = {
+        ...suggestions,
+        [suggestionForm.studentId]: {
+          suggestion: createdSuggestion.suggestion,
+          career: createdSuggestion.career,
+          date: createdSuggestion.date,
+        }
+      };
+
+      setSuggestions(updatedSuggestions);
+      setSuggestionForm({ studentId: "", suggestion: "", career: "" });
+      alert("Personalized suggestion added successfully!");
+    } catch (err) {
+      alert(err.message || "Unable to add suggestion right now");
+    }
   };
 
-  const handleDeleteSuggestion = (studentId) => {
-    const updatedSuggestions = { ...suggestions };
-    delete updatedSuggestions[studentId];
-    setSuggestions(updatedSuggestions);
-    localStorage.setItem("personalizedSuggestions", JSON.stringify(updatedSuggestions));
+  const handleDeleteSuggestion = async (studentId) => {
+    try {
+      await apiDelete(API_ENDPOINTS.integration.suggestionByStudent(studentId));
+      const updatedSuggestions = { ...suggestions };
+      delete updatedSuggestions[studentId];
+      setSuggestions(updatedSuggestions);
+    } catch (err) {
+      alert(err.message || "Unable to delete suggestion right now");
+    }
   };
 
 
@@ -496,6 +567,24 @@ function AdminDashboard() {
                   <p>No questions available. Please create questions first.</p>
                 )}
               </div>
+            </div>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Assessment ID</label>
+              <input
+                type="number"
+                min="1"
+                value={assignmentForm.assessmentId}
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, assessmentId: e.target.value })}
+                placeholder="Enter assessment id"
+                style={{
+                  display: "block",
+                  width: "100%",
+                  padding: "8px",
+                  borderRadius: "4px",
+                  border: "1px solid #cbd5e0"
+                }}
+              />
             </div>
 
             <div style={{ marginBottom: "15px" }}>

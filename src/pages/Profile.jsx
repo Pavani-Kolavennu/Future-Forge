@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../styles/Profile.css";
+import { API_ENDPOINTS, apiGet, apiPost } from "../api/client";
 
 function Profile() {
   const navigate = useNavigate();
@@ -9,9 +10,10 @@ function Profile() {
   const [assignedTests, setAssignedTests] = useState([]);
   const [studentSuggestion, setStudentSuggestion] = useState(null);
   const [testSubmissions, setTestSubmissions] = useState({});
+  const [questionsBank, setQuestionsBank] = useState([]);
 
   useEffect(() => {
-    const loadStudentData = () => {
+    const loadStudentData = async () => {
       const currentUser = localStorage.getItem("currentUser");
 
       if (!currentUser) {
@@ -29,36 +31,39 @@ function Profile() {
 
       setUser(userData);
 
-      const history = JSON.parse(
-        localStorage.getItem("assessmentHistory") || "[]"
-      );
+      try {
+        const [backendHistory, backendAssignments, backendSuggestions, backendSubmissionMap, backendQuestions] = await Promise.all([
+          apiGet(API_ENDPOINTS.integration.assessmentHistoryByStudent(userData.email)),
+          apiGet(API_ENDPOINTS.integration.assignmentsByStudent(userData.email)),
+          apiGet(API_ENDPOINTS.integration.suggestions),
+          apiGet(API_ENDPOINTS.integration.submissionsByStudent(userData.email)),
+          apiGet(API_ENDPOINTS.integration.questions),
+        ]);
 
-      const userHistory = history.filter(
-        (h) => h.userId === userData.email
-      );
-      setAssessmentHistory(userHistory);
-
-      const allAssignments = JSON.parse(localStorage.getItem("testAssignments") || "[]");
-      const studentAssignments = allAssignments
-        .filter((assignment) => assignment.studentId === userData.email)
-        .sort((a, b) => new Date(b.assignedDate) - new Date(a.assignedDate));
-      setAssignedTests(studentAssignments);
-
-      const allSuggestions = JSON.parse(localStorage.getItem("personalizedSuggestions") || "{}");
-      setStudentSuggestion(allSuggestions[userData.email] || null);
-
-      const allSubmissions = JSON.parse(localStorage.getItem("testSubmissions") || "{}");
-      setTestSubmissions(allSubmissions[userData.email] || {});
+        setAssessmentHistory(backendHistory);
+        const sortedAssignments = [...backendAssignments].sort(
+          (a, b) => new Date(b.assignedDate) - new Date(a.assignedDate)
+        );
+        setAssignedTests(sortedAssignments);
+        setStudentSuggestion(backendSuggestions[userData.email] || null);
+        setTestSubmissions(backendSubmissionMap[userData.email] || {});
+        setQuestionsBank(
+          backendQuestions.map((q) => ({
+            ...q,
+            options: (q.options || []).map((option) =>
+              typeof option === "string" ? option : option.text
+            ),
+          }))
+        );
+      } catch (err) {
+        alert(err.message || "Unable to load your data from backend");
+      }
     };
 
     loadStudentData();
 
     const handleStorageChange = (event) => {
       if (
-        event.key === "assessmentHistory" ||
-        event.key === "testAssignments" ||
-        event.key === "personalizedSuggestions" ||
-        event.key === "testSubmissions" ||
         event.key === "currentUser"
       ) {
         loadStudentData();
@@ -102,8 +107,7 @@ function Profile() {
   };
 
   const getQuestionsFromDb = (questionIds) => {
-    const allQuestions = JSON.parse(localStorage.getItem("adminQuestions") || "[]");
-    return allQuestions.filter((q) => questionIds.includes(q.id));
+    return questionsBank.filter((q) => questionIds.includes(q.id));
   };
 
   const handleStartTest = (assignment) => {
@@ -112,7 +116,7 @@ function Profile() {
     setTestAnswers({});
   };
 
-  const handleSubmitTest = () => {
+  const handleSubmitTest = async () => {
     const requiredAnswers = testBeingTaken.questions.length;
     const answeredCount = Object.keys(testAnswers).length;
 
@@ -121,23 +125,29 @@ function Profile() {
       return;
     }
 
-    const allSubmissions = JSON.parse(localStorage.getItem("testSubmissions") || "{}");
-    
-    if (!allSubmissions[user.email]) {
-      allSubmissions[user.email] = {};
+    try {
+      const savedSubmission = await apiPost(API_ENDPOINTS.integration.submissions, {
+        studentEmail: user.email,
+        assignmentId: testBeingTaken.id,
+        answers: Object.fromEntries(
+          Object.entries(testAnswers).map(([questionId, selectedOption]) => [
+            String(questionId),
+            selectedOption,
+          ])
+        ),
+      });
+
+      setTestSubmissions({
+        ...testSubmissions,
+        [testBeingTaken.id]: savedSubmission,
+      });
+
+      alert("Test submitted successfully!");
+      setTestBeingTaken(null);
+      setTestAnswers({});
+    } catch {
+      alert("Unable to submit test right now");
     }
-
-    allSubmissions[user.email][testBeingTaken.id] = {
-      answers: testAnswers,
-      submittedAt: new Date().toISOString(),
-      assignmentId: testBeingTaken.id
-    };
-
-    localStorage.setItem("testSubmissions", JSON.stringify(allSubmissions));
-    setTestSubmissions(allSubmissions[user.email] || {});
-    alert("Test submitted successfully!");
-    setTestBeingTaken(null);
-    setTestAnswers({});
   };
 
   if (!user) {
