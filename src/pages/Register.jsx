@@ -1,22 +1,72 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import "../styles/Forms.css";
-import { API_ENDPOINTS, apiRequest, mapBackendRoleToUiRole } from "../api/client";
+import { API_ENDPOINTS, apiPost, apiRequest, mapBackendRoleToUiRole } from "../api/client";
 
 function Register() {
   const navigate = useNavigate();
+
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [role, setRole] = useState("");
+  const [otp, setOtp] = useState("");
+
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpVerified, setOtpVerified] = useState(false);
+
   const [error, setError] = useState("");
 
+  // ✅ Send OTP
+  const sendOtp = async () => {
+    if (!email) {
+      alert("Enter email first ❌");
+      return;
+    }
+
+    try {
+      await apiPost(API_ENDPOINTS.auth.sendOtp, { email });
+      alert("OTP sent to email ✅");
+      setOtpSent(true);
+      setOtpVerified(false); // reset verification if re-sent
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to send OTP ❌");
+    }
+  };
+
+  // ✅ Verify OTP
+  const verifyOtp = async () => {
+    try {
+      const data = await apiPost(API_ENDPOINTS.auth.verifyOtp, {
+        email,
+        otp: otp.trim(),
+      });
+
+      if (data === true) {
+        alert("OTP Verified ✅");
+        setOtpVerified(true);
+      } else {
+        alert("Invalid OTP ❌");
+        setOtpVerified(false);
+      }
+    } catch (err) {
+      console.error(err);
+      alert(err.message || "Failed to verify OTP ❌");
+      setOtpVerified(false);
+    }
+  };
+  // ✅ Register
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    // Validate passwords match
+    if (!otpVerified) {
+      setError("Please verify OTP first");
+      return;
+    }
+
     if (password !== confirm) {
       setError("Passwords do not match");
       return;
@@ -29,6 +79,7 @@ function Register() {
 
     try {
       const backendRole = role === "admin" ? "ADMIN" : "CANDIDATE";
+
       const auth = await apiRequest(API_ENDPOINTS.auth.register, {
         method: "POST",
         body: JSON.stringify({
@@ -66,11 +117,12 @@ function Register() {
       {error && <div className="error-message">{error}</div>}
 
       <form onSubmit={handleSubmit}>
+
+        {/* Name */}
         <div className="form-group">
-          <label htmlFor="name">Full Name</label>
+          <label>Full Name</label>
           <input
             type="text"
-            id="name"
             placeholder="Enter your full name"
             required
             value={name}
@@ -78,24 +130,50 @@ function Register() {
           />
         </div>
 
+        {/* Email + OTP */}
         <div className="form-group">
-          <label htmlFor="email">Email Address</label>
+          <label>Email Address</label>
           <input
             type="email"
-            id="email"
             placeholder="Enter your email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            disabled={otpSent}
           />
+          <button type="button" onClick={sendOtp}>
+            Send OTP
+          </button>
         </div>
 
+        {/* OTP Section */}
+        {otpSent && (
+          <div className="form-group">
+            <label>Enter OTP</label>
+            <input
+              type="text"
+              placeholder="Enter OTP"
+              value={otp}
+              onChange={(e) => setOtp(e.target.value)}
+            />
+
+            {/* ✅ IMPORTANT: button with disable */}
+            <button
+              type="button"
+              onClick={verifyOtp}
+              disabled={otpVerified}
+            >
+              {otpVerified ? "Verified ✅" : "Verify OTP"}
+            </button>
+          </div>
+        )}
+
+        {/* Password */}
         <div className="form-group">
-          <label htmlFor="password">Password</label>
+          <label>Password</label>
           <input
             type="password"
-            id="password"
-            placeholder="Enter a strong password"
+            placeholder="Enter password"
             required
             minLength={8}
             value={password}
@@ -103,23 +181,22 @@ function Register() {
           />
         </div>
 
+        {/* Confirm Password */}
         <div className="form-group">
-          <label htmlFor="confirm">Confirm Password</label>
+          <label>Confirm Password</label>
           <input
             type="password"
-            id="confirm"
-            placeholder="Confirm your password"
+            placeholder="Confirm password"
             required
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
           />
         </div>
 
-        {/* Role Selection */}
+        {/* Role */}
         <div className="form-group">
-          <label htmlFor="role">Register As</label>
+          <label>Register As</label>
           <select
-            id="role"
             required
             value={role}
             onChange={(e) => setRole(e.target.value)}
@@ -130,7 +207,12 @@ function Register() {
           </select>
         </div>
 
-        <button type="submit" className="form-submit">
+        {/* Register */}
+        <button
+          type="submit"
+          className="form-submit"
+          disabled={!otpVerified}
+        >
           Register
         </button>
       </form>
