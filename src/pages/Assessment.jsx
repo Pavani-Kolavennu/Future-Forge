@@ -1,16 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import "../styles/Assessment.css";
-import { API_ENDPOINTS, apiGet, apiPost } from "../api/client";
-
-const FRONTEND_ASSESSMENT = {
-  title: "Career Assessment",
-  description:
-    "Frontend career-fit questionnaire used to recommend a matching role.",
-  durationMinutes: 10,
-  passingScore: 70,
-  active: true,
-};
+import { API_ENDPOINTS, apiPost } from "../api/client";
 
 function Assessment() {
   const navigate = useNavigate();
@@ -23,25 +14,6 @@ function Assessment() {
       navigate("/login");
     }
   }, [navigate]);
-
-  useEffect(() => {
-    const seedAssessment = async () => {
-      try {
-        const assessments = await apiGet(API_ENDPOINTS.integration.assessments);
-        const existingAssessment = assessments.find(
-          (assessment) => assessment.title === FRONTEND_ASSESSMENT.title
-        );
-
-        if (!existingAssessment) {
-          await apiPost(API_ENDPOINTS.integration.assessments, FRONTEND_ASSESSMENT);
-        }
-      } catch (error) {
-        console.warn("Unable to seed assessment record", error);
-      }
-    };
-
-    seedAssessment();
-  }, []);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
