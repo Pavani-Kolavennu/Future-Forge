@@ -115,7 +115,36 @@ function Profile() {
   const getTestStatus = (assignment) => {
     const submission = testSubmissions[assignment.id];
     if (submission) {
-      return { status: "completed", label: "✓ Completed", color: "#48bb78" };
+      const assignmentQuestions = getQuestionsFromDb(assignment.questions || []);
+      const evaluatedQuestions = assignmentQuestions.filter(
+        (question) => question.correctOptionIndex != null
+      );
+
+      if (evaluatedQuestions.length > 0) {
+        const correctCount = evaluatedQuestions.reduce((count, question) => {
+          const studentAnswer = Number(submission.answers?.[String(question.id)]);
+          const correctAnswer = Number(question.correctOptionIndex);
+          return count + (studentAnswer === correctAnswer ? 1 : 0);
+        }, 0);
+
+        const wrongCount = evaluatedQuestions.length - correctCount;
+
+        if (wrongCount > 0) {
+          return {
+            status: "completed",
+            label: `✗ ${correctCount}/${evaluatedQuestions.length} Correct`,
+            color: "#f56565",
+          };
+        }
+
+        return {
+          status: "completed",
+          label: `✓ ${correctCount}/${evaluatedQuestions.length} Correct`,
+          color: "#48bb78",
+        };
+      }
+
+      return { status: "completed", label: "✓ Submitted", color: "#48bb78" };
     }
     
     const dueDate = new Date(assignment.dueDate);

@@ -1037,7 +1037,8 @@ function AdminDashboard() {
 
                 {selectedSubmission.assignment && selectedSubmission.assignment.questions.map((questionId, idx) => {
                   const question = questions.find(q => q.id === questionId);
-                  const studentAnswer = selectedSubmission.submission.answers[questionId];
+                  const studentAnswer = Number(selectedSubmission.submission.answers[questionId]);
+                  const correctOptionIndex = Number(question?.correctOptionIndex);
 
                   if (!question) return null;
 
@@ -1048,19 +1049,34 @@ function AdminDashboard() {
                       </strong>
                       <div style={{ marginLeft: "10px" }}>
                         {question.options.map((option, optIdx) => (
+                          (() => {
+                            const isStudentChoice = studentAnswer === optIdx;
+                            const isCorrectChoice = correctOptionIndex === optIdx;
+                            const isWrongSelected = isStudentChoice && !isCorrectChoice;
+                            const isCorrectSelected = isStudentChoice && isCorrectChoice;
+                            const isMissedCorrect = !isStudentChoice && isCorrectChoice;
+
+                            return (
                           <div
                             key={optIdx}
                             style={{
                               padding: "8px",
                               marginBottom: "6px",
-                              background: studentAnswer === optIdx ? "#c6f6d5" : "#edf2f7",
+                              background: isWrongSelected ? "#fed7d7" : isCorrectChoice ? "#c6f6d5" : "#edf2f7",
                               borderRadius: "4px",
-                              border: studentAnswer === optIdx ? "2px solid #38a169" : "1px solid #cbd5e0"
+                              border: isWrongSelected
+                                ? "2px solid #e53e3e"
+                                : isCorrectChoice
+                                  ? "2px solid #38a169"
+                                  : "1px solid #cbd5e0"
                             }}
                           >
-                            {studentAnswer === optIdx && "✓ "}
+                            {isWrongSelected && "✗ "}
+                            {(isCorrectSelected || isMissedCorrect) && "✓ "}
                             {option}
                           </div>
+                            );
+                          })()
                         ))}
                       </div>
                     </div>
