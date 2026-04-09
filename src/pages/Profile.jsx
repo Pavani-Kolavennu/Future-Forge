@@ -12,54 +12,77 @@ function Profile() {
   const [testSubmissions, setTestSubmissions] = useState({});
   const [questionsBank, setQuestionsBank] = useState([]);
 
+  const normalizeQuestions = (questions) =>
+    (questions || []).map((question) => ({
+      ...question,
+      options: (question.options || []).map((option) =>
+        typeof option === "string" ? option : option.text
+      ),
+    }));
+
+  const loadStudentData = async () => {
+    const currentUser = localStorage.getItem("currentUser");
+
+    if (!currentUser) {
+      navigate("/login");
+      return;
+    }
+
+    const userData = JSON.parse(currentUser);
+
+    if (userData.role !== "student") {
+      navigate("/login");
+      return;
+    }
+
+    setUser(userData);
+
+    try {
+      const [backendHistory, backendAssignments, backendSubmissionMap, backendSuggestion] = await Promise.all([
+        apiGet(API_ENDPOINTS.integration.assessmentHistoryByStudent(userData.email)),
+        apiGet(API_ENDPOINTS.integration.studentAssignmentsByStudent(userData.email)),
+        apiGet(API_ENDPOINTS.integration.submissionsByStudent(userData.email)),
+        apiGet(API_ENDPOINTS.integration.studentSuggestionByStudent(userData.email)),
+      ]);
+
+      setAssessmentHistory(Array.isArray(backendHistory) ? backendHistory : []);
+
+      const sortedAssignments = [...(Array.isArray(backendAssignments) ? backendAssignments : [])].sort(
+        (a, b) => new Date(b.assignedDate) - new Date(a.assignedDate)
+      );
+      setAssignedTests(sortedAssignments);
+
+      setTestSubmissions(backendSubmissionMap?.[userData.email.trim().toLowerCase()] || {});
+
+      setStudentSuggestion(
+        backendSuggestion && Object.keys(backendSuggestion).length > 0 ? backendSuggestion : null
+      );
+
+      const uniqueAssessmentIds = [...new Set(
+        sortedAssignments.map((assignment) => assignment.assessmentId).filter(Boolean)
+      )];
+      const questionMap = new Map();
+
+      await Promise.all(
+        uniqueAssessmentIds.map(async (assessmentId) => {
+          try {
+            const assessmentQuestions = await apiGet(API_ENDPOINTS.integration.assessmentQuestions(assessmentId));
+            normalizeQuestions(assessmentQuestions).forEach((question) => {
+              questionMap.set(question.id, question);
+            });
+          } catch {
+            // Keep the rest of the profile usable if a question lookup fails.
+          }
+        })
+      );
+
+      setQuestionsBank(Array.from(questionMap.values()));
+    } catch (err) {
+      alert(err.message || "Unable to load your data from backend");
+    }
+  };
+
   useEffect(() => {
-    const loadStudentData = async () => {
-      const currentUser = localStorage.getItem("currentUser");
-
-      if (!currentUser) {
-        navigate("/login");
-        return;
-      }
-
-      const userData = JSON.parse(currentUser);
-
-      // Allow only students
-      if (userData.role !== "student") {
-        navigate("/login");
-        return;
-      }
-
-      setUser(userData);
-
-      try {
-        const [backendHistory, backendAssignments, backendSuggestions, backendSubmissionMap, backendQuestions] = await Promise.all([
-          apiGet(API_ENDPOINTS.integration.assessmentHistoryByStudent(userData.email)),
-          apiGet(API_ENDPOINTS.integration.assignmentsByStudent(userData.email)),
-          apiGet(API_ENDPOINTS.integration.suggestions),
-          apiGet(API_ENDPOINTS.integration.submissionsByStudent(userData.email)),
-          apiGet(API_ENDPOINTS.integration.questions),
-        ]);
-
-        setAssessmentHistory(backendHistory);
-        const sortedAssignments = [...backendAssignments].sort(
-          (a, b) => new Date(b.assignedDate) - new Date(a.assignedDate)
-        );
-        setAssignedTests(sortedAssignments);
-        setStudentSuggestion(backendSuggestions[userData.email] || null);
-        setTestSubmissions(backendSubmissionMap[userData.email] || {});
-        setQuestionsBank(
-          backendQuestions.map((q) => ({
-            ...q,
-            options: (q.options || []).map((option) =>
-              typeof option === "string" ? option : option.text
-            ),
-          }))
-        );
-      } catch (err) {
-        alert(err.message || "Unable to load your data from backend");
-      }
-    };
-
     loadStudentData();
 
     const handleStorageChange = (event) => {
@@ -79,6 +102,10 @@ function Profile() {
 
   const [testBeingTaken, setTestBeingTaken] = useState(null);
   const [testAnswers, setTestAnswers] = useState({});
+
+  const latestAssessment = [...assessmentHistory].sort(
+    (a, b) => new Date(b.date) - new Date(a.date)
+  )[0] || null;
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
@@ -145,8 +172,8 @@ function Profile() {
       alert("Test submitted successfully!");
       setTestBeingTaken(null);
       setTestAnswers({});
-    } catch {
-      alert("Unable to submit test right now");
+    } catch (err) {
+      alert(err.message || "Unable to submit test right now");
     }
   };
 
@@ -178,8 +205,8 @@ function Profile() {
         <div className="stat-card">
           <div className="stat-icon">📊</div>
           <div className="stat-value">
-            {assessmentHistory.length > 0
-              ? assessmentHistory[assessmentHistory.length - 1].score + "%"
+            {latestAssessment
+              ? latestAssessment.score + "%"
               : "N/A"}
           </div>
           <div className="stat-label">Latest Score</div>
@@ -188,8 +215,8 @@ function Profile() {
         <div className="stat-card">
           <div className="stat-icon">💼</div>
           <div className="stat-value">
-            {assessmentHistory.length > 0
-              ? assessmentHistory[assessmentHistory.length - 1].career
+            {latestAssessment
+              ? latestAssessment.career
               : "N/A"}
           </div>
           <div className="stat-label">Recommended Career</div>

@@ -160,14 +160,16 @@ function Register() {
 
         <div className="form-group">
           <label>Password</label>
-          <input
-            type="password"
-            placeholder="Enter password"
-            required
-            minLength={8}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
+         <input
+  type="password"
+  placeholder="Enter password"
+  required
+  minLength={8}
+  pattern="^(?=.*[A-Z])(?=.*[a-z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$"
+  title="Password must have at least one uppercase letter, one lowercase letter, one number, and one special character"
+  value={password}
+  onChange={(e) => setPassword(e.target.value)}
+/>
         </div>
 
         <div className="form-group">

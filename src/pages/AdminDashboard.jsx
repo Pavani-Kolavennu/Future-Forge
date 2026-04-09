@@ -11,8 +11,16 @@ function AdminDashboard() {
   
   // Questions Management State
   const [questions, setQuestions] = useState([]);
+  const [assessments, setAssessments] = useState([]);
+  const [assessmentForm, setAssessmentForm] = useState({
+    title: "",
+    durationMinutes: "",
+    passingScore: "",
+  });
   const [newQuestion, setNewQuestion] = useState({
     text: "",
+    assessmentId: "",
+    correctOptionIndex: "0",
     options: ["", "", ""]
   });
 
@@ -38,7 +46,7 @@ function AdminDashboard() {
   const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   const loadQuestions = async () => {
-    const backendQuestions = await apiGet(API_ENDPOINTS.integration.questions);
+    const backendQuestions = await apiGet(API_ENDPOINTS.integration.adminQuestions);
     const normalizedQuestions = backendQuestions.map((q) => ({
       ...q,
       options: (q.options || []).map((option) =>
@@ -46,6 +54,11 @@ function AdminDashboard() {
       ),
     }));
     setQuestions(normalizedQuestions);
+  };
+
+  const loadAssessments = async () => {
+    const backendAssessments = await apiGet(API_ENDPOINTS.integration.assessments);
+    setAssessments(backendAssessments);
   };
 
   const loadAssignments = async () => {
@@ -97,6 +110,7 @@ function AdminDashboard() {
       try {
         await Promise.all([
           loadStudents(),
+          loadAssessments(),
           loadQuestions(),
           loadAssignments(),
           loadSuggestions(),
@@ -118,15 +132,24 @@ function AdminDashboard() {
 
   // Question Management
   const handleAddQuestion = async () => {
-    if (!newQuestion.text || newQuestion.options.some(o => !o)) {
-      alert("Please fill in all fields");
+    if (!newQuestion.assessmentId || !newQuestion.text || newQuestion.options.some(o => !o)) {
+      alert("Please select an assessment and fill in all question fields");
+      return;
+    }
+
+    const correctOptionIndex = Number(newQuestion.correctOptionIndex);
+    if (Number.isNaN(correctOptionIndex) || correctOptionIndex < 0 || correctOptionIndex >= newQuestion.options.length) {
+      alert("Please choose a valid correct answer");
       return;
     }
 
     try {
-      const createdQuestion = await apiPost(API_ENDPOINTS.integration.questions, {
+      const createdQuestion = await apiPost(API_ENDPOINTS.integration.adminQuestions, {
+        assessmentId: Number(newQuestion.assessmentId),
         text: newQuestion.text,
         options: newQuestion.options,
+        correctOptionIndex,
+        active: true,
       });
       const updatedQuestions = [
         ...questions,
@@ -138,10 +161,32 @@ function AdminDashboard() {
         },
       ];
       setQuestions(updatedQuestions);
-      setNewQuestion({ text: "", options: ["", "", ""] });
+      setNewQuestion({ text: "", assessmentId: "", correctOptionIndex: "0", options: ["", "", ""] });
       alert("Question added successfully!");
     } catch (err) {
       alert(err.message || "Unable to add question right now");
+    }
+  };
+
+  const handleAddAssessment = async () => {
+    if (!assessmentForm.title) {
+      alert("Please enter an assessment title");
+      return;
+    }
+
+    try {
+      const createdAssessment = await apiPost(API_ENDPOINTS.integration.createAssessment, {
+        title: assessmentForm.title,
+        durationMinutes: assessmentForm.durationMinutes ? Number(assessmentForm.durationMinutes) : null,
+        passingScore: assessmentForm.passingScore ? Number(assessmentForm.passingScore) : null,
+        active: true,
+      });
+
+      setAssessments([...assessments, createdAssessment]);
+      setAssessmentForm({ title: "", durationMinutes: "", passingScore: "" });
+      alert(`Assessment created successfully! ID: ${createdAssessment.id}`);
+    } catch (err) {
+      alert(err.message || "Unable to create assessment right now");
     }
   };
 
@@ -158,7 +203,7 @@ function AdminDashboard() {
   // Test Assignment
   const handleAssignTest = async () => {
     if (!assignmentForm.studentId || !assignmentForm.assessmentId || assignmentForm.questions.length === 0 || !assignmentForm.dueDate) {
-      alert("Please fill in all fields (including assessment id) and select at least one question");
+      alert("Please fill in all fields and select at least one question");
       return;
     }
 
@@ -262,6 +307,10 @@ function AdminDashboard() {
       testAssignments.some((assignment) => assignment.id === Number(submission.assignmentId))
     )
   );
+
+  const selectedAssessmentQuestions = assignmentForm.assessmentId
+    ? questions.filter((question) => Number(question.assessmentId) === Number(assignmentForm.assessmentId))
+    : [];
 
   if (!admin) return null;
 
@@ -414,9 +463,93 @@ function AdminDashboard() {
       {activeTab === "questions" && (
         <div className="profile-section">
           <h3>Manage Assessment Questions</h3>
+
+          <div style={{ background: "#f7fafc", padding: "20px", borderRadius: "8px", marginBottom: "20px" }}>
+            <h4>Create Assessment</h4>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Assessment Title</label>
+              <input
+                type="text"
+                value={assessmentForm.title}
+                onChange={(e) => setAssessmentForm({ ...assessmentForm, title: e.target.value })}
+                placeholder="Enter assessment title"
+                style={{ display: "block", width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e0" }}
+              />
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "15px", marginBottom: "15px" }}>
+              <div>
+                <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Duration Minutes</label>
+                <input
+                  type="number"
+                  min="1"
+                  value={assessmentForm.durationMinutes}
+                  onChange={(e) => setAssessmentForm({ ...assessmentForm, durationMinutes: e.target.value })}
+                  placeholder="Optional"
+                  style={{ display: "block", width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e0" }}
+                />
+              </div>
+              <div>
+                <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Passing Score</label>
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  value={assessmentForm.passingScore}
+                  onChange={(e) => setAssessmentForm({ ...assessmentForm, passingScore: e.target.value })}
+                  placeholder="Optional"
+                  style={{ display: "block", width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e0" }}
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={handleAddAssessment}
+              style={{ padding: "10px 20px", background: "#805ad5", color: "white", border: "none", borderRadius: "4px", cursor: "pointer", fontWeight: "bold" }}
+            >
+              Create Assessment
+            </button>
+          </div>
+
+          <div style={{ background: "#f7fafc", padding: "20px", borderRadius: "8px", marginBottom: "20px" }}>
+            <h4>Available Assessments</h4>
+            {assessments.length > 0 ? (
+              <div>
+                {assessments.map((assessment) => (
+                  <div key={assessment.id} style={{ padding: "12px", background: "white", marginBottom: "8px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
+                    <strong>{assessment.title}</strong>
+                    <div style={{ fontSize: "14px", color: "#718096" }}>
+                      ID: {assessment.id}
+                      {assessment.durationMinutes ? ` • ${assessment.durationMinutes} min` : ""}
+                      {assessment.passingScore != null ? ` • Passing ${assessment.passingScore}%` : ""}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p>No assessments created yet. Create one first, then add questions to it.</p>
+            )}
+          </div>
           
           <div style={{ background: "#f7fafc", padding: "20px", borderRadius: "8px", marginBottom: "20px" }}>
             <h4>Add New Question</h4>
+
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Assessment</label>
+              <select
+                value={newQuestion.assessmentId}
+                onChange={(e) => setNewQuestion({ ...newQuestion, assessmentId: e.target.value })}
+                style={{ display: "block", width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e0" }}
+              >
+                <option value="">Select an assessment</option>
+                {assessments.map((assessment) => (
+                  <option key={assessment.id} value={assessment.id}>
+                    {assessment.title} (ID: {assessment.id})
+                  </option>
+                ))}
+              </select>
+            </div>
             
             <div style={{ marginBottom: "15px" }}>
               <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Question Text</label>
@@ -459,6 +592,21 @@ function AdminDashboard() {
               </div>
             ))}
 
+            <div style={{ marginBottom: "15px" }}>
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Correct Answer</label>
+              <select
+                value={newQuestion.correctOptionIndex}
+                onChange={(e) => setNewQuestion({ ...newQuestion, correctOptionIndex: e.target.value })}
+                style={{ display: "block", width: "100%", padding: "8px", borderRadius: "4px", border: "1px solid #cbd5e0" }}
+              >
+                {[0, 1, 2].map((index) => (
+                  <option key={index} value={index}>
+                    Option {index + 1}
+                  </option>
+                ))}
+              </select>
+            </div>
+
             <button
               onClick={handleAddQuestion}
               style={{
@@ -483,7 +631,10 @@ function AdminDashboard() {
                   <div key={q.id} style={{ padding: "15px", background: "white", marginBottom: "10px", borderRadius: "4px", border: "1px solid #e2e8f0" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "start" }}>
                       <div style={{ flex: 1 }}>
-                        <strong>{index + 1}. {q.text}</strong>
+                          <strong>{index + 1}. {q.text}</strong>
+                          <div style={{ marginTop: "4px", fontSize: "12px", color: "#a0aec0" }}>
+                            Assessment ID: {q.assessmentId}
+                          </div>
                         <div style={{ marginTop: "8px", fontSize: "14px", color: "#718096" }}>
                           {q.options.map((opt, i) => (
                             <div key={i}>• {opt}</div>
@@ -547,8 +698,9 @@ function AdminDashboard() {
             <div style={{ marginBottom: "15px" }}>
               <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Select Questions</label>
               <div style={{ maxHeight: "200px", overflowY: "auto", border: "1px solid #cbd5e0", borderRadius: "4px", padding: "10px" }}>
-                {questions.length > 0 ? (
-                  questions.map((q) => (
+                {assignmentForm.assessmentId ? (
+                  selectedAssessmentQuestions.length > 0 ? (
+                    selectedAssessmentQuestions.map((q) => (
                     <label key={q.id} style={{ display: "block", marginBottom: "8px" }}>
                       <input
                         type="checkbox"
@@ -562,21 +714,21 @@ function AdminDashboard() {
                       />
                       {" "} {q.text}
                     </label>
-                  ))
+                    ))
+                  ) : (
+                    <p>No questions exist for this assessment yet. Create questions first.</p>
+                  )
                 ) : (
-                  <p>No questions available. Please create questions first.</p>
+                  <p>Select an assessment to see its questions.</p>
                 )}
               </div>
             </div>
 
             <div style={{ marginBottom: "15px" }}>
-              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Assessment ID</label>
-              <input
-                type="number"
-                min="1"
+              <label style={{ display: "block", marginBottom: "8px", fontWeight: "bold" }}>Assessment</label>
+              <select
                 value={assignmentForm.assessmentId}
-                onChange={(e) => setAssignmentForm({ ...assignmentForm, assessmentId: e.target.value })}
-                placeholder="Enter assessment id"
+                onChange={(e) => setAssignmentForm({ ...assignmentForm, assessmentId: e.target.value, questions: [] })}
                 style={{
                   display: "block",
                   width: "100%",
@@ -584,7 +736,19 @@ function AdminDashboard() {
                   borderRadius: "4px",
                   border: "1px solid #cbd5e0"
                 }}
-              />
+              >
+                <option value="">Select an assessment</option>
+                {assessments.map((assessment) => (
+                  <option key={assessment.id} value={assessment.id}>
+                    {assessment.title} (ID: {assessment.id})
+                  </option>
+                ))}
+              </select>
+              {assessments.length === 0 && (
+                <p style={{ marginTop: "8px", color: "#b7791f" }}>
+                  Create an assessment first before assigning tests.
+                </p>
+              )}
             </div>
 
             <div style={{ marginBottom: "15px" }}>

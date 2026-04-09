@@ -1,7 +1,4 @@
-const API_BASE_URL = (
-  import.meta.env.VITE_API_BASE_URL ||
-  "http://localhost:8080"
-).replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://localhost:8080").replace(/\/$/, "");
 
 export const API_ENDPOINTS = {
   auth: {
@@ -15,13 +12,21 @@ export const API_ENDPOINTS = {
   },
   integration: {
     assessments: "/api/assessments",
+    createAssessment: "/api/assessments",
+    assessmentQuestions: (assessmentId) =>
+      `/api/assessments/${assessmentId}/questions`,
     questions: "/api/admin/questions/simple",
+    adminQuestions: "/api/admin/questions",
     assignments: "/api/admin/assignments",
     assignmentsByStudent: (studentEmail) =>
       `/api/admin/assignments/student/${encodeURIComponent(studentEmail)}`,
+    studentAssignmentsByStudent: (studentEmail) =>
+      `/api/assignments/student/${encodeURIComponent(studentEmail)}`,
     suggestions: "/api/admin/suggestions",
     suggestionByStudent: (studentEmail) =>
       `/api/admin/suggestions/${encodeURIComponent(studentEmail)}`,
+    studentSuggestionByStudent: (studentEmail) =>
+      `/api/suggestions/student/${encodeURIComponent(studentEmail)}`,
     submissions: "/api/assessments/submissions",
     submissionsByStudent: (studentEmail) =>
       `/api/assessments/submissions/student/${encodeURIComponent(studentEmail)}`,
@@ -54,7 +59,7 @@ export async function apiRequest(path, options = {}) {
     });
   } catch (error) {
     throw new Error(
-      `Unable to reach the backend at ${API_BASE_URL}. Make sure the server is running and CORS is configured.`
+      `Unable to reach the backend for ${path}. If you are running the app locally, make sure the API server is running and the Vite proxy or VITE_API_BASE_URL is configured correctly.`
     );
   }
 

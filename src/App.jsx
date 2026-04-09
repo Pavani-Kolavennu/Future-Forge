@@ -13,7 +13,7 @@ function App() {
   const location = useLocation();
   const [user, setUser] = useState(null);
 
-  // Re-check user whenever route changes
+
   useEffect(() => {
     const currentUser = localStorage.getItem("currentUser");
     setUser(currentUser ? JSON.parse(currentUser) : null);
