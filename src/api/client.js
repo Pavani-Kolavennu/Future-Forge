@@ -30,9 +30,6 @@ export const API_ENDPOINTS = {
     submissions: "/api/assessments/submissions",
     submissionsByStudent: (studentEmail) =>
       `/api/assessments/submissions/student/${encodeURIComponent(studentEmail)}`,
-    assessmentHistoryByStudent: (studentEmail) =>
-      `/api/results/history/student/${encodeURIComponent(studentEmail)}`,
-    assessmentHistory: "/api/results/history",
     questionById: (questionId) => `/api/admin/questions/${questionId}`,
     assignmentById: (assignmentId) => `/api/admin/assignments/${assignmentId}`,
   },

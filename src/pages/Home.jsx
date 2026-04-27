@@ -16,23 +16,15 @@ function Home() {
         <div className="hero-content">
           <h1 className="hero-title">Discover Your Perfect Career Path</h1>
           <p className="hero-subtitle">
-            Take our comprehensive career assessment to understand your strengths, interests, and find the ideal career for you.
+            Get assigned tests, track progress, and receive personalized career suggestions from your admin.
           </p>
           <div className="hero-buttons">
             <Link
-              to={currentUser?.role === "admin" ? "/admin" : "/assessment"}
+              to={currentUser?.role === "admin" ? "/admin/dashboard" : currentUser ? "/profile" : "/register"}
               className="btn btn-primary"
             >
-              {currentUser?.role === "admin" ? "Go to Admin Dashboard" : "Start Assessment"}
+              {currentUser?.role === "admin" ? "Go to Admin Dashboard" : currentUser ? "Open Your Dashboard" : "Get Started"}
             </Link>
-            {currentUser?.role !== "admin" && (
-              <Link
-                to={currentUser ? "/profile" : "/register"}
-                className="btn btn-secondary"
-              >
-                {currentUser ? "Go to Dashboard" : "Get Started"}
-              </Link>
-            )}
           </div>
         </div>
         <div className="hero-image">
@@ -45,23 +37,23 @@ function Home() {
         <div className="features-grid">
           <div className="feature-card">
             <div className="feature-icon">🧠</div>
-            <h3>Personality Assessment</h3>
-            <p>Discover your personality type and how it aligns with various career paths.</p>
+            <h3>Assigned Tests</h3>
+            <p>Take admin-assigned tests with due dates and clear question sets.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">💼</div>
             <h3>Skills Evaluation</h3>
-            <p>Evaluate your technical and soft skills to identify areas for development.</p>
+            <p>Measure your knowledge through structured test submissions.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">🎯</div>
             <h3>Career Recommendations</h3>
-            <p>Get personalized career recommendations based on your assessment results.</p>
+            <p>Receive personalized suggestions directly from admins based on your performance.</p>
           </div>
           <div className="feature-card">
             <div className="feature-icon">📈</div>
             <h3>Progress Tracking</h3>
-            <p>Track your assessment history and career development over time.</p>
+            <p>Track submission status and stay on top of upcoming deadlines.</p>
           </div>
         </div>
       </section>
@@ -77,30 +69,30 @@ function Home() {
           </div>
           <div className="step">
             <div className="step-number">2</div>
-            <h3>Take Assessment</h3>
-            <p>Complete our comprehensive career assessment questionnaire.</p>
+            <h3>Take Assigned Test</h3>
+            <p>Complete questions assigned by your admin before due dates.</p>
           </div>
           <div className="step">
             <div className="step-number">3</div>
-            <h3>Get Results</h3>
-            <p>Receive detailed results and career recommendations tailored to you.</p>
+            <h3>Submit Answers</h3>
+            <p>Submit your test and view completion status in your profile.</p>
           </div>
           <div className="step">
             <div className="step-number">4</div>
-            <h3>Explore Careers</h3>
-            <p>Explore career options with insights to guide your decisions.</p>
+            <h3>Get Guidance</h3>
+            <p>Review personalized suggestions shared by the admin.</p>
           </div>
         </div>
       </section>
 
       <section className="cta">
         <h2>Ready to Find Your Dream Career?</h2>
-        <p>Start your career assessment journey today and unlock your potential.</p>
+        <p>Open your dashboard and continue your guided career journey.</p>
         <Link
-          to={currentUser?.role === "admin" ? "/admin" : "/assessment"}
+          to={currentUser?.role === "admin" ? "/admin/dashboard" : currentUser ? "/profile" : "/register"}
           className="btn btn-large"
         >
-          {currentUser?.role === "admin" ? "Open Admin Dashboard" : "Take Assessment Now"}
+          {currentUser?.role === "admin" ? "Open Admin Dashboard" : currentUser ? "Go to Profile" : "Create Account"}
         </Link>
       </section>
     </div>

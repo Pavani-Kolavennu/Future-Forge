@@ -3,10 +3,13 @@ import { Routes, Route, Link, Navigate, useLocation } from "react-router-dom";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import Assessment from "./pages/Assessment";
-import Result from "./pages/Result";
 import Profile from "./pages/Profile";
 import AdminDashboard from "./pages/AdminDashboard";
+import AdminOverview from "./pages/admin/AdminOverview";
+import AdminQuestions from "./pages/admin/AdminQuestions";
+import AdminAssignments from "./pages/admin/AdminAssignments";
+import AdminSuggestions from "./pages/admin/AdminSuggestions";
+import AdminResults from "./pages/admin/AdminResults";
 import "./App.css";
 
 function App() {
@@ -33,16 +36,6 @@ function App() {
           <ul className="nav-links">
             <li><Link to="/">Home</Link></li>
 
-            {(!user || user.role === "student") && (
-              <li>
-                {user ? (
-                  <Link to="/assessment">Assessment</Link>
-                ) : (
-                  <Link to="/login">Assessment</Link>
-                )}
-              </li>
-            )}
-
             {user ? (
               <>
                 {user.role === "student" && (
@@ -50,7 +43,7 @@ function App() {
                 )}
 
                 {user.role === "admin" && (
-                  <li><Link to="/admin">Admin</Link></li>
+                  <li><Link to="/admin/dashboard">Admin</Link></li>
                 )}
               </>
             ) : (
@@ -78,17 +71,6 @@ function App() {
           />
 
           <Route
-            path="/assessment"
-            element={
-              user && user.role === "student"
-                ? <Assessment />
-                : <Navigate to={user && user.role === "admin" ? "/admin" : "/login"} />
-            }
-          />
-
-          <Route path="/result" element={<Result />} />
-
-          <Route
             path="/profile"
             element={
               user && user.role === "student"
@@ -104,12 +86,19 @@ function App() {
                 ? <AdminDashboard />
                 : <Navigate to="/login" />
             }
-          />
+          >
+            <Route index element={<Navigate to="dashboard" replace />} />
+            <Route path="dashboard" element={<AdminOverview />} />
+            <Route path="questions" element={<AdminQuestions />} />
+            <Route path="assignments" element={<AdminAssignments />} />
+            <Route path="suggestions" element={<AdminSuggestions />} />
+            <Route path="results" element={<AdminResults />} />
+          </Route>
         </Routes>
       </main>
 
       <footer className="footer">
-        <p>&copy; 2026 Future Forge Assessment Tool. All rights reserved.</p>
+        <p>&copy; 2026 Future Forge Career Platform. All rights reserved.</p>
       </footer>
     </div>
   );

@@ -1,12 +1,11 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../styles/Profile.css";
 import { API_ENDPOINTS, apiGet, apiPost } from "../api/client";
 
 function Profile() {
   const navigate = useNavigate();
   const [user, setUser] = useState(null);
-  const [assessmentHistory, setAssessmentHistory] = useState([]);
   const [assignedTests, setAssignedTests] = useState([]);
   const [studentSuggestion, setStudentSuggestion] = useState(null);
   const [testSubmissions, setTestSubmissions] = useState({});
@@ -38,14 +37,11 @@ function Profile() {
     setUser(userData);
 
     try {
-      const [backendHistory, backendAssignments, backendSubmissionMap, backendSuggestion] = await Promise.all([
-        apiGet(API_ENDPOINTS.integration.assessmentHistoryByStudent(userData.email)),
+      const [backendAssignments, backendSubmissionMap, backendSuggestion] = await Promise.all([
         apiGet(API_ENDPOINTS.integration.studentAssignmentsByStudent(userData.email)),
         apiGet(API_ENDPOINTS.integration.submissionsByStudent(userData.email)),
         apiGet(API_ENDPOINTS.integration.studentSuggestionByStudent(userData.email)),
       ]);
-
-      setAssessmentHistory(Array.isArray(backendHistory) ? backendHistory : []);
 
       const sortedAssignments = [...(Array.isArray(backendAssignments) ? backendAssignments : [])].sort(
         (a, b) => new Date(b.assignedDate) - new Date(a.assignedDate)
@@ -103,9 +99,8 @@ function Profile() {
   const [testBeingTaken, setTestBeingTaken] = useState(null);
   const [testAnswers, setTestAnswers] = useState({});
 
-  const latestAssessment = [...assessmentHistory].sort(
-    (a, b) => new Date(b.date) - new Date(a.date)
-  )[0] || null;
+  const completedTests = assignedTests.filter((assignment) => Boolean(testSubmissions[assignment.id])).length;
+  const pendingTests = Math.max(assignedTests.length - completedTests, 0);
 
   const handleLogout = () => {
     localStorage.removeItem("currentUser");
@@ -115,35 +110,6 @@ function Profile() {
   const getTestStatus = (assignment) => {
     const submission = testSubmissions[assignment.id];
     if (submission) {
-      const assignmentQuestions = getQuestionsFromDb(assignment.questions || []);
-      const evaluatedQuestions = assignmentQuestions.filter(
-        (question) => question.correctOptionIndex != null
-      );
-
-      if (evaluatedQuestions.length > 0) {
-        const correctCount = evaluatedQuestions.reduce((count, question) => {
-          const studentAnswer = Number(submission.answers?.[String(question.id)]);
-          const correctAnswer = Number(question.correctOptionIndex);
-          return count + (studentAnswer === correctAnswer ? 1 : 0);
-        }, 0);
-
-        const wrongCount = evaluatedQuestions.length - correctCount;
-
-        if (wrongCount > 0) {
-          return {
-            status: "completed",
-            label: `✗ ${correctCount}/${evaluatedQuestions.length} Correct`,
-            color: "#f56565",
-          };
-        }
-
-        return {
-          status: "completed",
-          label: `✓ ${correctCount}/${evaluatedQuestions.length} Correct`,
-          color: "#48bb78",
-        };
-      }
-
       return { status: "completed", label: "✓ Submitted", color: "#48bb78" };
     }
     
@@ -226,35 +192,27 @@ function Profile() {
       {/* Stats */}
       <div className="profile-stats">
         <div className="stat-card">
-          <div className="stat-icon">🎯</div>
-          <div className="stat-value">{assessmentHistory.length}</div>
-          <div className="stat-label">Assessments Taken</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">📊</div>
-          <div className="stat-value">
-            {latestAssessment
-              ? latestAssessment.score + "%"
-              : "N/A"}
-          </div>
-          <div className="stat-label">Latest Score</div>
-        </div>
-
-        <div className="stat-card">
-          <div className="stat-icon">💼</div>
-          <div className="stat-value">
-            {latestAssessment
-              ? latestAssessment.career
-              : "N/A"}
-          </div>
-          <div className="stat-label">Recommended Career</div>
-        </div>
-
-        <div className="stat-card">
           <div className="stat-icon">📝</div>
           <div className="stat-value">{assignedTests.length}</div>
-          <div className="stat-label">Tests Assigned By Admin</div>
+          <div className="stat-label">Tests Assigned</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">✅</div>
+          <div className="stat-value">{completedTests}</div>
+          <div className="stat-label">Completed Tests</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">⏳</div>
+          <div className="stat-value">{pendingTests}</div>
+          <div className="stat-label">Pending Tests</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-icon">💡</div>
+          <div className="stat-value">{studentSuggestion ? "Yes" : "No"}</div>
+          <div className="stat-label">Suggestion Available</div>
         </div>
       </div>
 
@@ -391,45 +349,6 @@ function Profile() {
             <p>No personalized suggestion from admin yet.</p>
           </div>
         )}
-      </div>
-
-      {/* History */}
-      <div className="profile-section">
-        <h3>Assessment History</h3>
-
-        {assessmentHistory.length > 0 ? (
-          <div className="history-list">
-            {[...assessmentHistory]
-              .reverse()
-              .map((assessment, index) => (
-                <div key={index} className="history-item">
-                  <div className="history-date">
-                    {new Date(assessment.date).toLocaleDateString()}
-                  </div>
-                  <div className="history-details">
-                    <strong>{assessment.career}</strong>
-                    <span className="history-score">
-                      Score: {assessment.score}%
-                    </span>
-                  </div>
-                </div>
-              ))}
-          </div>
-        ) : (
-          <div className="no-history">
-            <p>You haven't taken any assessments yet.</p>
-            <Link to="/assessment" className="btn btn-primary">
-              Take Your First Assessment
-            </Link>
-          </div>
-        )}
-      </div>
-
-      {/* Actions */}
-      <div className="profile-actions">
-        <Link to="/assessment" className="btn btn-primary">
-          Take New Assessment
-        </Link>
       </div>
 
       {/* Logout at bottom (Instagram style) */}
