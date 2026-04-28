@@ -1,4 +1,4 @@
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "http://future-forge-backend-production.up.railway.app").replace(/\/$/, "");
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || "https://future-forge-backend-production.up.railway.app").replace(/\/$/, "");
 
 export const API_ENDPOINTS = {
   auth: {
