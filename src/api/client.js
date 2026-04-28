@@ -4,8 +4,6 @@ export const API_ENDPOINTS = {
   auth: {
     register: "/api/auth/register",
     login: "/api/auth/login",
-    sendOtp: "/api/auth/otp/send",
-    verifyOtp: "/api/auth/otp/verify",
   },
   users: {
     list: "/api/users",
