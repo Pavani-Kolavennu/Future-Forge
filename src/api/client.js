@@ -4,6 +4,8 @@ export const API_ENDPOINTS = {
   auth: {
     register: "/api/auth/register",
     login: "/api/auth/login",
+    sendOtp: "/api/auth/otp/send",
+    verifyOtp: "/api/auth/otp/verify",
   },
   users: {
     list: "/api/users",
@@ -39,6 +41,10 @@ export const mapBackendRoleToUiRole = (role) => {
 };
 
 export async function apiRequest(path, options = {}) {
+  if (!path) {
+    throw new Error("API request path is required");
+  }
+
   const token = localStorage.getItem("authToken");
   const { headers: customHeaders, ...requestOptions } = options;
   let response;
